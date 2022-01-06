@@ -1,8 +1,8 @@
 package wireless
 
 import (
+	"bufio"
 	"bytes"
-	"encoding/csv"
 	"fmt"
 	"net"
 	"strconv"
@@ -17,12 +17,7 @@ func parseNetwork(b []byte) ([]Network, error) {
 		b = b[i:]
 	}
 
-	r := csv.NewReader(bytes.NewReader(b))
-	r.Comma = '\t'
-	r.FieldsPerRecord = 4
-	r.LazyQuotes = true
-
-	recs, err := r.ReadAll()
+	recs, err := splitBytesByLinesIntoStrings(b)
 	if err != nil {
 		if len(b) >= CONN_MAX_LISTEN_BUFF-i {
 			err = errors.Wrap(err, fmt.Sprintf("list too long: %d B", len(b)+(i)))
@@ -31,7 +26,11 @@ func parseNetwork(b []byte) ([]Network, error) {
 	}
 
 	nts := []Network{}
-	for _, rec := range recs {
+	for _, rawRec := range recs {
+		rec := strings.Split(rawRec, "\t")
+		if len(rec) != 4 {
+			continue
+		}
 		id, err := strconv.Atoi(rec[0])
 		if err != nil {
 			return nil, errors.Wrap(err, "parse id")
@@ -66,11 +65,7 @@ func parseAP(b []byte) ([]AP, error) {
 		b = b[i:]
 	}
 
-	r := csv.NewReader(bytes.NewReader(b))
-	r.Comma = '\t'
-	r.FieldsPerRecord = 5
-
-	recs, err := r.ReadAll()
+	recs, err := splitBytesByLinesIntoStrings(b)
 	if err != nil {
 		if len(b) >= CONN_MAX_LISTEN_BUFF-i {
 			err = errors.Wrap(err, fmt.Sprintf("list too long: %d B", len(b)+(i)))
@@ -79,7 +74,11 @@ func parseAP(b []byte) ([]AP, error) {
 	}
 
 	aps := []AP{}
-	for _, rec := range recs {
+	for _, rawRec := range recs {
+		rec := strings.Split(rawRec, "\t")
+		if len(rec) != 5 {
+			continue
+		}
 		bssid, err := net.ParseMAC(rec[0])
 		if err != nil {
 			return nil, errors.Wrap(err, "parse mac")
@@ -117,4 +116,17 @@ func itoa(i int) string {
 
 func unquote(s string) string {
 	return strings.Trim(s, `"`)
+}
+
+func splitBytesByLinesIntoStrings(b []byte) ([]string, error) {
+	scanner := bufio.NewScanner(bytes.NewReader(b))
+	lines := []string{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return lines, nil
 }
