@@ -1,2 +1,6 @@
 c.out
 bin/*
+
+vendor/*
+go.mod
+go.sum
