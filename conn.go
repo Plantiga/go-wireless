@@ -14,7 +14,9 @@ import (
 	"time"
 )
 
-const CONN_MAX_LISTEN_BUFF = 3 * 1024 // Allow 3kB of buffer for listening to events
+// Allow 10kB of buffer for listening to events
+// This should allow for 100 'worst-case' APs with 32B names and all attributes
+const CONN_MAX_LISTEN_BUFF = 10 * 1024
 
 // Conn represents a connection to a WPA supplicant control interface
 type Conn struct {
